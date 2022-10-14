@@ -20,6 +20,7 @@ import android.annotation.NonNull;
 import android.annotation.Nullable;
 import android.content.Context;
 import android.net.ConnectivityManager;
+import android.net.EthernetManager;
 import android.net.ConnectivityResources;
 import android.net.EthernetManager;
 import android.net.EthernetNetworkManagementException;
@@ -28,12 +29,14 @@ import android.net.INetworkInterfaceOutcomeReceiver;
 import android.net.IpConfiguration;
 import android.net.IpConfiguration.IpAssignment;
 import android.net.IpConfiguration.ProxySettings;
+import android.net.LinkAddress;
 import android.net.LinkProperties;
 import android.net.NetworkAgentConfig;
 import android.net.NetworkCapabilities;
 import android.net.NetworkProvider;
 import android.net.NetworkRequest;
 import android.net.NetworkScore;
+import android.net.RouteInfo;
 import android.net.ip.IIpClient;
 import android.net.ip.IpClientCallbacks;
 import android.net.ip.IpClientManager;
@@ -52,9 +55,13 @@ import android.util.SparseArray;
 import com.android.connectivity.resources.R;
 import com.android.internal.annotations.VisibleForTesting;
 import com.android.internal.util.IndentingPrintWriter;
+import com.android.net.module.util.Inet4AddressUtils;
 import com.android.net.module.util.InterfaceParams;
 
 import java.io.FileDescriptor;
+import java.lang.reflect.Method;
+import java.net.Inet4Address;
+import java.net.InetAddress;
 import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
@@ -72,6 +79,7 @@ public class EthernetNetworkFactory {
             new ConcurrentHashMap<>();
     private final Handler mHandler;
     private final Context mContext;
+	private EthernetManager mEthernetManager;
     private final NetworkProvider mProvider;
     final Dependencies mDeps;
 
@@ -255,6 +263,112 @@ public class EthernetNetworkFactory {
     @VisibleForTesting
     protected boolean hasInterface(String ifaceName) {
         return mTrackingInterfaces.containsKey(ifaceName);
+    }
+	
+	String getIpAddress(String iface) {
+		if (mEthernetManager == null) {
+			mEthernetManager = (EthernetManager) mContext.getSystemService(Context.ETHERNET_SERVICE);
+		}
+        IpConfiguration config = mEthernetManager.getConfiguration(iface);
+        if (config.getIpAssignment() == IpAssignment.STATIC) {
+            return config.getStaticIpConfiguration().getIpAddress().getAddress().getHostAddress();
+        } else {
+            NetworkInterfaceState netState = mTrackingInterfaces.get(iface);
+            if (null != netState) {
+                for (LinkAddress l : netState.mLinkProperties.getLinkAddresses()) {
+                    InetAddress source = l.getAddress();
+                    //Log.d(TAG, "getIpAddress: " + source.getHostAddress());
+                    if (source instanceof Inet4Address) {
+                        return source.getHostAddress();
+                    }
+                }
+            }
+        }
+        return "";
+    }
+
+    private String prefix2netmask(int prefix) {
+        // convert prefix to netmask
+        if (true) {
+            int mask = 0xFFFFFFFF << (32 - prefix);
+            //Log.d(TAG, "mask = " + mask + " prefix = " + prefix);
+            return ((mask>>>24) & 0xff) + "." + ((mask>>>16) & 0xff) + "." + ((mask>>>8) & 0xff) + "." + ((mask) & 0xff);
+        } else {
+            int hostAddress = Inet4AddressUtils.prefixLengthToV4NetmaskIntHTL(prefix);
+            return Inet4AddressUtils.intToInet4AddressHTL(hostAddress).getHostName();
+        }
+    }
+
+    String getNetmask(String iface) {
+        IpConfiguration config = mEthernetManager.getConfiguration(iface);
+        if (config.getIpAssignment() == IpAssignment.STATIC) {
+            return prefix2netmask(config.getStaticIpConfiguration().getIpAddress().getPrefixLength());
+        } else {
+            NetworkInterfaceState netState = mTrackingInterfaces.get(iface);
+            if (null != netState) {
+                for (LinkAddress l : netState.mLinkProperties.getLinkAddresses()) {
+                    InetAddress source = l.getAddress();
+                    if (source instanceof Inet4Address) {
+                        return prefix2netmask(l.getPrefixLength());
+                    }
+                }
+            }
+        }
+        return "";
+    }
+
+    String getGateway(String iface) {
+        IpConfiguration config = mEthernetManager.getConfiguration(iface);
+        if (config.getIpAssignment() == IpAssignment.STATIC) {
+            return config.getStaticIpConfiguration().getGateway().getHostAddress();
+        } else {
+            NetworkInterfaceState netState = mTrackingInterfaces.get(iface);
+            if (null != netState) {
+                for (RouteInfo route : netState.mLinkProperties.getRoutes()) {
+                    if (route.hasGateway()) {
+                        InetAddress gateway = route.getGateway();
+                        Object isIPv4Default = invokeMethodNoParameter(route, "isIPv4Default");
+                        if (null != isIPv4Default && (Boolean)isIPv4Default) {
+                            return gateway.getHostAddress();
+                        }
+                    }
+                }
+            }
+        }
+        return "";
+    }
+
+    private Object invokeMethodNoParameter(Object object, String methodName) {
+        try {
+            Method method = object.getClass().getDeclaredMethod(methodName);
+            method.setAccessible(true);
+            return method.invoke(object);
+            //return method.invoke(object, paramTypes);
+        } catch (Exception e) {
+            Log.e(TAG, "invokeMethod->methodName:" + methodName + ", " + e);
+        }
+        return null;
+    }
+
+    /*
+     * return dns format: "8.8.8.8,4.4.4.4"
+     */
+    String getDns(String iface) {
+        String dns = "";
+        IpConfiguration config = mEthernetManager.getConfiguration(iface);
+        if (config.getIpAssignment() == IpAssignment.STATIC) {
+            for (InetAddress nameserver : config.getStaticIpConfiguration().getDnsServers()) {
+                dns += nameserver.getHostAddress() + ",";
+            }
+        } else {
+            NetworkInterfaceState netState = mTrackingInterfaces.get(iface);
+            if (null != netState) {
+                for (InetAddress nameserver : netState.mLinkProperties.getDnsServers()) {
+                    dns += nameserver.getHostAddress() + ",";
+                }
+            }
+        }
+        return dns;
     }
 
     private static void maybeSendNetworkManagementCallback(

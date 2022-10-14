@@ -136,6 +136,61 @@ public class EthernetServiceImpl extends IEthernetManager.Stub {
 
         return mTracker.isTrackingInterface(iface);
     }
+	
+    @Override
+    public boolean isInterfaceup(String iface) {
+        PermissionUtils.enforceAccessNetworkStatePermission(mContext, TAG);
+
+        if (mTracker.isRestrictedInterface(iface)) {
+            PermissionUtils.enforceRestrictedNetworkPermission(mContext, TAG);
+        }
+
+        return mTracker.isTrackingInterface(iface);
+    }
+
+    @Override
+    public String getIpAddress(String iface) {
+        PermissionUtils.enforceAccessNetworkStatePermission(mContext, TAG);
+
+        if (mTracker.isRestrictedInterface(iface)) {
+            PermissionUtils.enforceRestrictedNetworkPermission(mContext, TAG);
+        }
+
+        return mTracker.getIpAddress(iface);
+    }
+
+    @Override
+    public String getNetmask(String iface) {
+        PermissionUtils.enforceAccessNetworkStatePermission(mContext, TAG);
+
+        if (mTracker.isRestrictedInterface(iface)) {
+            PermissionUtils.enforceRestrictedNetworkPermission(mContext, TAG);
+        }
+
+        return mTracker.getNetmask(iface);
+    }
+
+    @Override
+    public String getGateway(String iface) {
+        PermissionUtils.enforceAccessNetworkStatePermission(mContext, TAG);
+
+        if (mTracker.isRestrictedInterface(iface)) {
+            PermissionUtils.enforceRestrictedNetworkPermission(mContext, TAG);
+        }
+
+        return mTracker.getGateway(iface);
+    }
+
+    @Override
+    public String getDns(String iface) {
+        PermissionUtils.enforceAccessNetworkStatePermission(mContext, TAG);
+
+        if (mTracker.isRestrictedInterface(iface)) {
+            PermissionUtils.enforceRestrictedNetworkPermission(mContext, TAG);
+        }
+
+        return mTracker.getDns(iface);
+    }
 
     /**
      * Adds a listener.

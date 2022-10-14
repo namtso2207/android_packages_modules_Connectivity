@@ -43,6 +43,7 @@ import java.util.List;
 import java.util.Objects;
 import java.util.concurrent.Executor;
 import java.util.function.IntConsumer;
+import android.util.Log;
 
 /**
  * A class that manages and configures Ethernet interfaces.
@@ -191,8 +192,10 @@ public class EthernetManager {
      * @return the Ethernet Configuration, contained in {@link IpConfiguration}.
      * @hide
      */
-    @UnsupportedAppUsage(maxTargetSdk = Build.VERSION_CODES.R, trackingBug = 170729553)
-    public IpConfiguration getConfiguration(String iface) {
+    @RequiresPermission(android.Manifest.permission.ACCESS_NETWORK_STATE)
+    @SystemApi(client = MODULE_LIBRARIES)
+    @NonNull
+    public IpConfiguration getConfiguration(@NonNull String iface) {
         try {
             return mService.getConfiguration(iface);
         } catch (RemoteException e) {
@@ -204,7 +207,9 @@ public class EthernetManager {
      * Set Ethernet configuration.
      * @hide
      */
-    @UnsupportedAppUsage(maxTargetSdk = Build.VERSION_CODES.R, trackingBug = 170729553)
+    @RequiresPermission(android.Manifest.permission.ACCESS_NETWORK_STATE)
+    @SystemApi(client = MODULE_LIBRARIES)
+    @NonNull
     public void setConfiguration(@NonNull String iface, @NonNull IpConfiguration config) {
         try {
             mService.setConfiguration(iface, config);
@@ -236,6 +241,64 @@ public class EthernetManager {
             throw e.rethrowFromSystemServer();
         }
     }
+	
+    /**
+     * @hide
+     */
+    @RequiresPermission(android.Manifest.permission.ACCESS_NETWORK_STATE)
+    @SystemApi(client = MODULE_LIBRARIES)
+    @NonNull
+    public String getIpAddress(@NonNull String iface) {
+        try {
+            return mService.getIpAddress(iface);
+        } catch (RemoteException e) {
+            throw e.rethrowFromSystemServer();
+        }
+    }
+	
+	
+    /**
+     * @hide
+     */
+    @RequiresPermission(android.Manifest.permission.ACCESS_NETWORK_STATE)
+    @SystemApi(client = MODULE_LIBRARIES)
+    @NonNull
+    public String getNetmask(@NonNull String iface) {
+        try {
+            return mService.getNetmask(iface);
+        } catch (RemoteException e) {
+            throw e.rethrowFromSystemServer();
+        }
+    }
+
+    /**
+     * @hide
+     */
+    @RequiresPermission(android.Manifest.permission.ACCESS_NETWORK_STATE)
+    @SystemApi(client = MODULE_LIBRARIES)
+    @NonNull
+    public String getGateway(@NonNull String iface) {
+        try {
+            return mService.getGateway(iface);
+        } catch (RemoteException e) {
+            throw e.rethrowFromSystemServer();
+        }
+    }
+
+    /**
+     * @hide
+     */
+    @RequiresPermission(android.Manifest.permission.ACCESS_NETWORK_STATE)
+    @SystemApi(client = MODULE_LIBRARIES)
+    @NonNull
+    public String getDns(@NonNull String iface) {
+        try {
+            return mService.getDns(iface);
+        } catch (RemoteException e) {
+            throw e.rethrowFromSystemServer();
+        }
+    }
+
 
     /**
      * Adds a listener.
@@ -318,7 +381,9 @@ public class EthernetManager {
      * Returns an array of available Ethernet interface names.
      * @hide
      */
-    @UnsupportedAppUsage(maxTargetSdk = Build.VERSION_CODES.R, trackingBug = 170729553)
+    @RequiresPermission(android.Manifest.permission.ACCESS_NETWORK_STATE)
+    @SystemApi(client = MODULE_LIBRARIES)
+    @NonNull
     public String[] getAvailableInterfaces() {
         try {
             return mService.getAvailableInterfaces();
