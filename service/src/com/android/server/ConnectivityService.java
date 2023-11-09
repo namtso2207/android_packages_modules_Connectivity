@@ -3944,7 +3944,8 @@ public class ConnectivityService extends IConnectivityManager.Stub
                 case NetworkAgentInfo.EVENT_NETWORK_LINGER_COMPLETE: {
                     NetworkAgentInfo nai = (NetworkAgentInfo) msg.obj;
                     if (nai != null && isLiveNetworkAgent(nai, msg.what)) {
-                        handleLingerComplete(nai);
+                        //handleLingerComplete(nai);
+			log("hcq skip Unlingering " + nai.toShortString());
                     }
                     break;
                 }
