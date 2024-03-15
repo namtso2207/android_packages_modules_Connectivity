@@ -129,6 +129,10 @@ public class EthernetConfigStore {
             }
 
             if (modified) {
+				final File directory = new File(APEX_IP_CONFIG_FILE_PATH);
+				if (!directory.exists()) {
+					directory.mkdirs();
+				}
                 mStore.writeIpConfigurations(filepath, mIpConfigurations);
             }
         }
